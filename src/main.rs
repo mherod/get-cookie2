@@ -4,7 +4,7 @@ mod jwt;
 mod output;
 mod types;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use browsers::{chrome::ChromeCookieReader, firefox::FirefoxCookieReader, BrowserCookieReader};
 use clap::Parser;
 use output::{output_cookies, OutputFormat};
@@ -26,9 +26,17 @@ struct Args {
     #[arg(short, long)]
     browser: Option<String>,
 
-    /// Output format (plain, json)
+    /// Output format (plain, json, render)
     #[arg(short, long, default_value = "plain")]
     output: String,
+
+    /// URL to extract domain from
+    #[arg(short, long)]
+    url: Option<String>,
+
+    /// Render cookies as HTTP header format
+    #[arg(short, long)]
+    render: bool,
 
     /// Include expired cookies
     #[arg(long)]
@@ -162,6 +170,20 @@ fn main() -> Result<()> {
         return list_profiles(browser_name);
     }
 
+    // Extract domain from URL if provided
+    let domain_pattern = if let Some(ref url_str) = args.url {
+        let parsed_url = url::Url::parse(url_str)
+            .context("Failed to parse URL")?;
+
+        let domain = parsed_url.host_str()
+            .context("URL has no host")?;
+
+        // Use % wildcards to match subdomains
+        format!("%{}%", domain)
+    } else {
+        args.domain.clone()
+    };
+
     let browser = match args.browser.as_deref() {
         Some("chrome") => Some(Browser::Chrome),
         Some("firefox") => Some(Browser::Firefox),
@@ -178,17 +200,22 @@ fn main() -> Result<()> {
 
     let query = CookieQuery {
         name_pattern: args.name.clone(),
-        domain_pattern: Some(args.domain.clone()),
+        domain_pattern: Some(domain_pattern),
         browser: browser.clone(),
         include_expired: args.include_expired,
     };
 
-    let output_format = match args.output.as_str() {
-        "json" => OutputFormat::Json,
-        "plain" => OutputFormat::Plain,
-        _ => {
-            eprintln!("Unknown output format: {}", args.output);
-            std::process::exit(1);
+    let output_format = if args.render || args.output == "render" {
+        OutputFormat::Render
+    } else {
+        match args.output.as_str() {
+            "json" => OutputFormat::Json,
+            "plain" => OutputFormat::Plain,
+            "render" => OutputFormat::Render,
+            _ => {
+                eprintln!("Unknown output format: {}", args.output);
+                std::process::exit(1);
+            }
         }
     };
 
