@@ -194,6 +194,11 @@ fn list_profiles(browser_name: &str) -> Result<()> {
 }
 
 fn main() -> Result<()> {
+    // Show help if no arguments provided
+    if std::env::args().len() == 1 {
+        Args::parse_from(&["get-cookie2", "--help"]);
+    }
+
     let args = Args::parse();
 
     // Handle profile listing
