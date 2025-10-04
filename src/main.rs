@@ -11,8 +11,36 @@ use output::{output_cookies, OutputFormat};
 use types::{Browser, CookieQuery};
 
 #[derive(Parser, Debug)]
-#[command(name = "get-cookie")]
-#[command(about = "Extract cookies from browser databases", long_about = None)]
+#[command(name = "get-cookie2")]
+#[command(about = "Extract cookies from browser databases")]
+#[command(long_about = None)]
+#[command(after_help = "\
+EXAMPLES:
+    # Extract specific cookie
+    get-cookie2 auth example.com
+
+    # Get all cookies for a domain as JSON
+    get-cookie2 % github.com --output json
+
+    # Render cookies as HTTP Cookie header
+    get-cookie2 --url https://example.com -r
+
+    # Generate and execute authenticated curl request
+    get-cookie2 --url https://api.example.com/endpoint --curl | bash
+
+    # Detect and decode JWT tokens in cookies
+    get-cookie2 % example.com --detect-jwt
+
+    # List browser profiles
+    get-cookie2 --list-profiles --browser chrome
+
+WORKFLOW TIPS:
+    The --curl flag generates a ready-to-use curl command with cookies inlined.
+    Pipe the output to 'bash' to execute immediately, or copy/paste for later use.
+
+    Example workflow:
+      get-cookie2 --url https://api.github.com/user --curl | bash | jq .
+")]
 struct Args {
     /// Cookie name pattern (% for wildcard)
     #[arg(default_value = "%")]
@@ -30,11 +58,11 @@ struct Args {
     #[arg(short, long, default_value = "plain")]
     output: String,
 
-    /// URL to extract domain from
+    /// URL to extract domain from (extracts cookies for the base domain)
     #[arg(short, long)]
     url: Option<String>,
 
-    /// Render cookies as HTTP header format
+    /// Render cookies as HTTP Cookie header format (name=value; name=value)
     #[arg(short, long)]
     render: bool,
 
@@ -62,7 +90,7 @@ struct Args {
     #[arg(long)]
     list_profiles: bool,
 
-    /// Output as a curl command (requires --url)
+    /// Generate curl command with cookies inlined (use with --url, pipe to bash to execute)
     #[arg(long)]
     curl: bool,
 }
