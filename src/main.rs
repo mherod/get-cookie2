@@ -174,32 +174,8 @@ fn main() -> Result<()> {
         return list_profiles(browser_name);
     }
 
-    // Handle curl command generation
-    if args.curl {
-        if args.url.is_none() {
-            eprintln!("Error: --curl requires --url to be specified");
-            std::process::exit(1);
-        }
-        let url_str = args.url.as_ref().unwrap();
-
-        // Extract base URL (scheme + host) for cookie domain
-        let parsed_url = url::Url::parse(url_str)
-            .context("Failed to parse URL")?;
-        let base_url = format!("{}://{}", parsed_url.scheme(), parsed_url.host_str().unwrap_or(""));
-
-        // Get current executable path
-        let exe_path = std::env::current_exe()
-            .ok()
-            .and_then(|p| p.to_str().map(String::from))
-            .unwrap_or_else(|| "get-cookie2".to_string());
-
-        let cmd = format!(
-            "curl -s {} -H \"Cookie: `{} -u {} -r`\"",
-            url_str, exe_path, base_url
-        );
-        println!("{}", cmd);
-        return Ok(());
-    }
+    // Handle curl command generation - we'll process this after collecting cookies
+    let curl_mode = args.curl;
 
     // Extract domain from URL if provided
     let domain_pattern = if let Some(ref url_str) = args.url {
@@ -345,7 +321,35 @@ fn main() -> Result<()> {
         }
     }
 
-    output_cookies(&all_cookies, output_format)?;
+    // Handle curl mode - inline cookies into curl command
+    if curl_mode {
+        if args.url.is_none() {
+            eprintln!("Error: --curl requires --url to be specified");
+            std::process::exit(1);
+        }
+        let url_str = args.url.as_ref().unwrap();
+
+        // Generate cookie header from collected cookies
+        let mut seen_names = std::collections::HashSet::new();
+        let cookie_header: Vec<String> = all_cookies
+            .iter()
+            .rev()
+            .filter(|c| seen_names.insert(c.name.clone()))
+            .map(|c| format!("{}={}", c.name, c.value))
+            .collect::<Vec<_>>()
+            .into_iter()
+            .rev()
+            .collect();
+        let cookie_str = cookie_header.join("; ");
+
+        let cmd = format!(
+            "curl -s {} -H \"Cookie: {}\"",
+            url_str, cookie_str
+        );
+        println!("{}", cmd);
+    } else {
+        output_cookies(&all_cookies, output_format)?;
+    }
 
     Ok(())
 }
