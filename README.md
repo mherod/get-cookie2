@@ -15,7 +15,10 @@ A fast, powerful command-line tool for extracting and using browser cookies. Bui
 ## Installation
 
 ```bash
-# Build from source
+# Install directly to ~/.cargo/bin (recommended)
+cargo install --path .
+
+# Or build from source
 cargo build --release
 
 # The binary will be at ./target/release/get-cookie2
