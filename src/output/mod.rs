@@ -21,9 +21,16 @@ pub fn output_cookies(cookies: &[Cookie], format: OutputFormat) -> Result<()> {
         }
         OutputFormat::Render => {
             // Output as HTTP Cookie header format: name=value; name=value
+            // Deduplicate by name, keeping the most recent (last) cookie
+            let mut seen_names = std::collections::HashSet::new();
             let cookie_parts: Vec<String> = cookies
                 .iter()
+                .rev() // Reverse to process most recent first
+                .filter(|c| seen_names.insert(c.name.clone()))
                 .map(|c| format!("{}={}", c.name, c.value))
+                .collect::<Vec<_>>()
+                .into_iter()
+                .rev() // Reverse back to original order
                 .collect();
             println!("{}", cookie_parts.join("; "));
         }
