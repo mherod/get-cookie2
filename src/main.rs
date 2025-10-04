@@ -61,6 +61,10 @@ struct Args {
     /// List available browser profiles
     #[arg(long)]
     list_profiles: bool,
+
+    /// Output as a curl command (requires --url)
+    #[arg(long)]
+    curl: bool,
 }
 
 fn list_profiles(browser_name: &str) -> Result<()> {
@@ -168,6 +172,33 @@ fn main() -> Result<()> {
     if args.list_profiles {
         let browser_name = args.browser.as_deref().unwrap_or("chrome");
         return list_profiles(browser_name);
+    }
+
+    // Handle curl command generation
+    if args.curl {
+        if args.url.is_none() {
+            eprintln!("Error: --curl requires --url to be specified");
+            std::process::exit(1);
+        }
+        let url_str = args.url.as_ref().unwrap();
+
+        // Extract base URL (scheme + host) for cookie domain
+        let parsed_url = url::Url::parse(url_str)
+            .context("Failed to parse URL")?;
+        let base_url = format!("{}://{}", parsed_url.scheme(), parsed_url.host_str().unwrap_or(""));
+
+        // Get current executable path
+        let exe_path = std::env::current_exe()
+            .ok()
+            .and_then(|p| p.to_str().map(String::from))
+            .unwrap_or_else(|| "get-cookie2".to_string());
+
+        let cmd = format!(
+            "curl -s {} -H \"Cookie: `{} -u {} -r`\"",
+            url_str, exe_path, base_url
+        );
+        println!("{}", cmd);
+        return Ok(());
     }
 
     // Extract domain from URL if provided
