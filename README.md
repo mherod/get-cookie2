@@ -97,10 +97,10 @@ The `--curl` flag generates a complete curl command with cookies embedded:
 
 ```bash
 # Generate curl command
-get-cookie2 --url https://plugg.in/api/auth/whoami --curl
+get-cookie2 --url https://api.example.com/user --curl
 
 # Output:
-# curl -s https://plugg.in/api/auth/whoami -H "Cookie: user_token=eyJhbG...; user_id=..."
+# curl -s https://api.example.com/user -H "Cookie: session_token=eyJhbG...; user_id=..."
 
 # Execute immediately by piping to bash
 get-cookie2 --url https://api.github.com/user --curl | bash
