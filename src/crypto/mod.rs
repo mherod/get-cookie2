@@ -34,7 +34,11 @@ pub fn get_chrome_key_cached() -> Result<Vec<u8>> {
 }
 
 /// Decrypt cookie value with a pre-fetched key
-pub fn decrypt_value_with_key(encrypted_value: &[u8], key: &[u8], meta_version: i64) -> Result<String> {
+pub fn decrypt_value_with_key(
+    encrypted_value: &[u8],
+    key: &[u8],
+    meta_version: i64,
+) -> Result<String> {
     #[cfg(target_os = "macos")]
     {
         decrypt_chrome_cookie_with_key(encrypted_value, key, meta_version)

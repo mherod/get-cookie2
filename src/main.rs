@@ -97,15 +97,23 @@ struct Args {
 
 fn list_profiles(browser_name: &str) -> Result<()> {
     use std::fs;
-    
 
     let home = dirs::home_dir().expect("Failed to get home directory");
 
     let (base_path, name) = match browser_name {
-        "chrome" => (home.join("Library/Application Support/Google/Chrome"), "Chrome"),
+        "chrome" => (
+            home.join("Library/Application Support/Google/Chrome"),
+            "Chrome",
+        ),
         "arc" => (home.join("Library/Application Support/Arc"), "Arc"),
-        "edge" => (home.join("Library/Application Support/Microsoft Edge"), "Edge"),
-        "firefox" => (home.join("Library/Application Support/Firefox/Profiles"), "Firefox"),
+        "edge" => (
+            home.join("Library/Application Support/Microsoft Edge"),
+            "Edge",
+        ),
+        "firefox" => (
+            home.join("Library/Application Support/Firefox/Profiles"),
+            "Firefox",
+        ),
         _ => {
             eprintln!("Profile listing not supported for {}", browser_name);
             return Ok(());
@@ -196,7 +204,7 @@ fn list_profiles(browser_name: &str) -> Result<()> {
 fn main() -> Result<()> {
     // Show help if no arguments provided
     if std::env::args().len() == 1 {
-        Args::parse_from(&["get-cookie2", "--help"]);
+        Args::parse_from(["get-cookie2", "--help"]);
     }
 
     let args = Args::parse();
@@ -212,11 +220,9 @@ fn main() -> Result<()> {
 
     // Extract domain from URL if provided
     let domain_pattern = if let Some(ref url_str) = args.url {
-        let parsed_url = url::Url::parse(url_str)
-            .context("Failed to parse URL")?;
+        let parsed_url = url::Url::parse(url_str).context("Failed to parse URL")?;
 
-        let domain = parsed_url.host_str()
-            .context("URL has no host")?;
+        let domain = parsed_url.host_str().context("URL has no host")?;
 
         // Use % wildcards to match subdomains
         format!("%{}%", domain)
@@ -241,7 +247,7 @@ fn main() -> Result<()> {
     let query = CookieQuery {
         name_pattern: args.name.clone(),
         domain_pattern: Some(domain_pattern),
-        browser: browser.clone(),
+        browser,
         include_expired: args.include_expired,
     };
 
@@ -265,7 +271,12 @@ fn main() -> Result<()> {
     let browsers_to_query: Vec<Browser> = if let Some(b) = browser {
         vec![b]
     } else {
-        vec![Browser::Chrome, Browser::Firefox, Browser::Arc, Browser::Edge]
+        vec![
+            Browser::Chrome,
+            Browser::Firefox,
+            Browser::Arc,
+            Browser::Edge,
+        ]
     };
 
     for browser in browsers_to_query {
@@ -320,7 +331,11 @@ fn main() -> Result<()> {
     // across different browser profiles
     let mut seen = std::collections::HashSet::new();
     all_cookies.retain(|cookie| {
-        seen.insert((cookie.name.clone(), cookie.domain.clone(), cookie.value.clone()))
+        seen.insert((
+            cookie.name.clone(),
+            cookie.domain.clone(),
+            cookie.value.clone(),
+        ))
     });
 
     // Filter for JWTs if requested
@@ -333,21 +348,36 @@ fn main() -> Result<()> {
         for cookie in &all_cookies {
             if jwt::is_jwt(&cookie.value) {
                 if args.verbose {
-                    eprintln!("\nJWT detected in cookie '{}' from {}", cookie.name, cookie.domain);
+                    eprintln!(
+                        "\nJWT detected in cookie '{}' from {}",
+                        cookie.name, cookie.domain
+                    );
                 }
 
                 if let Some(ref secret) = args.jwt_secret {
                     if let Some(jwt_info) = jwt::validate_jwt(&cookie.value, secret) {
                         eprintln!("\n✓ JWT signature valid for '{}'", cookie.name);
-                        eprintln!("  Header: {}", serde_json::to_string_pretty(&jwt_info.header)?);
-                        eprintln!("  Claims: {}", serde_json::to_string_pretty(&jwt_info.claims)?);
+                        eprintln!(
+                            "  Header: {}",
+                            serde_json::to_string_pretty(&jwt_info.header)?
+                        );
+                        eprintln!(
+                            "  Claims: {}",
+                            serde_json::to_string_pretty(&jwt_info.claims)?
+                        );
                     } else {
                         eprintln!("\n✗ JWT signature invalid for '{}'", cookie.name);
                     }
                 } else if let Some(jwt_info) = jwt::decode_jwt(&cookie.value) {
                     if args.verbose || args.detect_jwt {
-                        eprintln!("  Header: {}", serde_json::to_string_pretty(&jwt_info.header)?);
-                        eprintln!("  Claims: {}", serde_json::to_string_pretty(&jwt_info.claims)?);
+                        eprintln!(
+                            "  Header: {}",
+                            serde_json::to_string_pretty(&jwt_info.header)?
+                        );
+                        eprintln!(
+                            "  Claims: {}",
+                            serde_json::to_string_pretty(&jwt_info.claims)?
+                        );
                     }
                 }
             }
@@ -375,10 +405,7 @@ fn main() -> Result<()> {
             .collect();
         let cookie_str = cookie_header.join("; ");
 
-        let cmd = format!(
-            "curl -s {} -H \"Cookie: {}\"",
-            url_str, cookie_str
-        );
+        let cmd = format!("curl -s {} -H \"Cookie: {}\"", url_str, cookie_str);
         println!("{}", cmd);
     } else {
         output_cookies(&all_cookies, output_format)?;

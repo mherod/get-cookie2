@@ -56,18 +56,19 @@ impl BrowserCookieReader for FirefoxCookieReader {
     fn read_cookies(&self, store_path: &str, query: &CookieQuery) -> Result<Vec<Cookie>> {
         // Copy database to temp location to avoid locks
         let temp_path = format!("/tmp/firefox_cookies_{}.db", std::process::id());
-        std::fs::copy(store_path, &temp_path)
-            .context("Failed to copy Firefox cookie database")?;
+        std::fs::copy(store_path, &temp_path).context("Failed to copy Firefox cookie database")?;
 
-        let conn = Connection::open(&temp_path)
-            .context("Failed to open Firefox cookie database")?;
+        let conn =
+            Connection::open(&temp_path).context("Failed to open Firefox cookie database")?;
 
-        let mut sql = String::from(
-            "SELECT host, name, value, expiry FROM moz_cookies WHERE 1=1"
-        );
+        let mut sql = String::from("SELECT host, name, value, expiry FROM moz_cookies WHERE 1=1");
 
         let use_name_filter = query.name_pattern != "%";
-        let use_domain_filter = query.domain_pattern.as_ref().map(|d| d != "%").unwrap_or(false);
+        let use_domain_filter = query
+            .domain_pattern
+            .as_ref()
+            .map(|d| d != "%")
+            .unwrap_or(false);
 
         if use_name_filter {
             sql.push_str(" AND name LIKE ?1");
@@ -132,7 +133,6 @@ impl BrowserCookieReader for FirefoxCookieReader {
         let mut cookies = Vec::new();
 
         for (host, name, value, expiry) in rows {
-
             let expiry_time = Self::unix_timestamp_to_utc(expiry);
 
             // Filter expired if needed

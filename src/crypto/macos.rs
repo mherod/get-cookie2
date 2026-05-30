@@ -1,8 +1,11 @@
-use anyhow::{Context, Result};
-use security_framework::passwords::get_generic_password;
 use aes::Aes128;
-use cbc::{Decryptor, cipher::{BlockDecryptMut, KeyIvInit}};
+use anyhow::{Context, Result};
+use cbc::{
+    cipher::{BlockDecryptMut, KeyIvInit},
+    Decryptor,
+};
 use pbkdf2::pbkdf2_hmac;
+use security_framework::passwords::get_generic_password;
 use sha1::Sha1;
 
 type Aes128CbcDec = Decryptor<Aes128>;
@@ -18,18 +21,17 @@ pub fn get_chrome_key() -> Result<Vec<u8>> {
         .context("Failed to get Chrome Safe Storage password from Keychain")?;
 
     let mut key = vec![0u8; CHROME_KEY_LENGTH];
-    pbkdf2_hmac::<Sha1>(
-        &password_bytes,
-        CHROME_SALT,
-        CHROME_ITERATIONS,
-        &mut key,
-    );
+    pbkdf2_hmac::<Sha1>(&password_bytes, CHROME_SALT, CHROME_ITERATIONS, &mut key);
 
     Ok(key)
 }
 
 /// Decrypt Chrome cookie value on macOS with a provided key
-pub fn decrypt_chrome_cookie_with_key(encrypted_value: &[u8], key: &[u8], meta_version: i64) -> Result<String> {
+pub fn decrypt_chrome_cookie_with_key(
+    encrypted_value: &[u8],
+    key: &[u8],
+    meta_version: i64,
+) -> Result<String> {
     // Chrome on macOS prepends "v10" or "v11" to encrypted values
     if encrypted_value.len() < 3 {
         // Not encrypted, return as-is
@@ -57,11 +59,9 @@ pub fn decrypt_chrome_cookie_with_key(encrypted_value: &[u8], key: &[u8], meta_v
             decrypted_bytes
         };
 
-        String::from_utf8(final_decrypted.to_vec())
-            .context("Failed to decode decrypted value")
+        String::from_utf8(final_decrypted.to_vec()).context("Failed to decode decrypted value")
     } else {
         // Not encrypted with v10/v11, return as-is
-        String::from_utf8(encrypted_value.to_vec())
-            .context("Failed to decode unencrypted value")
+        String::from_utf8(encrypted_value.to_vec()).context("Failed to decode unencrypted value")
     }
 }

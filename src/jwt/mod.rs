@@ -1,4 +1,4 @@
-use jsonwebtoken::{decode, decode_header, DecodingKey, Validation, Algorithm};
+use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -39,11 +39,7 @@ pub fn decode_jwt(token: &str) -> Option<JwtInfo> {
     validation.validate_exp = false;
     validation.validate_nbf = false;
 
-    let token_data = decode::<Value>(
-        token,
-        &DecodingKey::from_secret(&[]),
-        &validation,
-    ).ok()?;
+    let token_data = decode::<Value>(token, &DecodingKey::from_secret(&[]), &validation).ok()?;
 
     Some(JwtInfo {
         header,
@@ -62,7 +58,8 @@ pub fn validate_jwt(token: &str, secret: &str) -> Option<JwtInfo> {
         token,
         &DecodingKey::from_secret(secret.as_bytes()),
         &validation,
-    ).ok()?;
+    )
+    .ok()?;
 
     Some(JwtInfo {
         header: serde_json::to_value(header).ok()?,

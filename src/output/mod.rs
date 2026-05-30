@@ -1,6 +1,5 @@
 use crate::types::Cookie;
 use anyhow::Result;
-use serde_json;
 
 pub enum OutputFormat {
     Plain,

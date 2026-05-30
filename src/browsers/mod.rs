@@ -1,6 +1,6 @@
 pub mod chrome;
-pub mod safari;
 pub mod firefox;
+pub mod safari;
 
 use crate::types::{Cookie, CookieQuery};
 use anyhow::Result;

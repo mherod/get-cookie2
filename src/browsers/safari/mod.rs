@@ -51,12 +51,9 @@ impl BrowserCookieReader for SafariCookieReader {
         }
 
         // Try reading as SQLite (Safari 14+)
-        let conn = Connection::open(store_path)
-            .context("Failed to open Safari cookie database")?;
+        let conn = Connection::open(store_path).context("Failed to open Safari cookie database")?;
 
-        let mut sql = String::from(
-            "SELECT domain, name, value, expires FROM cookies WHERE 1=1"
-        );
+        let mut sql = String::from("SELECT domain, name, value, expires FROM cookies WHERE 1=1");
 
         if query.name_pattern != "%" {
             sql.push_str(" AND name LIKE ?1");
@@ -108,7 +105,6 @@ impl BrowserCookieReader for SafariCookieReader {
         let mut cookies = Vec::new();
 
         for (domain, name, value, expires) in rows {
-
             let expiry = Self::safari_timestamp_to_utc(expires);
 
             // Filter expired if needed

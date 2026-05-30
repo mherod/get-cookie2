@@ -60,9 +60,7 @@ impl BrowserCookieReader for ChromeCookieReader {
         }
 
         // Additional profiles (Profile 1, Profile 2, etc.)
-        for entry in std::fs::read_dir(&base_path)
-            .context("Failed to read Chrome directory")?
-        {
+        for entry in std::fs::read_dir(&base_path).context("Failed to read Chrome directory")? {
             let entry = entry?;
             let path = entry.path();
 
@@ -83,26 +81,28 @@ impl BrowserCookieReader for ChromeCookieReader {
     fn read_cookies(&self, store_path: &str, query: &CookieQuery) -> Result<Vec<Cookie>> {
         // Copy database to temp location to avoid locks
         let temp_path = format!("/tmp/cookies_{}.db", std::process::id());
-        std::fs::copy(store_path, &temp_path)
-            .context("Failed to copy cookie database")?;
+        std::fs::copy(store_path, &temp_path).context("Failed to copy cookie database")?;
 
-        let conn = Connection::open(&temp_path)
-            .context("Failed to open cookie database")?;
+        let conn = Connection::open(&temp_path).context("Failed to open cookie database")?;
 
         let meta_version = get_meta_version(&conn).unwrap_or(0);
 
         // Pre-fetch the Chrome decryption key once for all cookies in this store.
         // This prevents multiple Keychain permission dialogs - the key is cached
         // globally so even multiple profile reads will only prompt once.
-        let chrome_key = crypto::get_chrome_key_cached()
-            .context("Failed to get Chrome encryption key")?;
+        let chrome_key =
+            crypto::get_chrome_key_cached().context("Failed to get Chrome encryption key")?;
 
         let mut sql = String::from(
-            "SELECT host_key, name, encrypted_value, expires_utc FROM cookies WHERE 1=1"
+            "SELECT host_key, name, encrypted_value, expires_utc FROM cookies WHERE 1=1",
         );
 
         let use_name_filter = query.name_pattern != "%";
-        let use_domain_filter = query.domain_pattern.as_ref().map(|d| d != "%").unwrap_or(false);
+        let use_domain_filter = query
+            .domain_pattern
+            .as_ref()
+            .map(|d| d != "%")
+            .unwrap_or(false);
 
         // Add name pattern filter
         if use_name_filter {
@@ -169,12 +169,9 @@ impl BrowserCookieReader for ChromeCookieReader {
         let mut cookies = Vec::new();
 
         for (host_key, name, encrypted_value, expires_utc) in rows {
-
             // Decrypt value using pre-fetched key
             let value = crypto::decrypt_value_with_key(&encrypted_value, &chrome_key, meta_version)
-                .unwrap_or_else(|_e| {
-                    String::from_utf8_lossy(&encrypted_value).to_string()
-                });
+                .unwrap_or_else(|_e| String::from_utf8_lossy(&encrypted_value).to_string());
 
             let expiry = Self::chrome_timestamp_to_utc(expires_utc);
 
