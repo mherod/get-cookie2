@@ -359,4 +359,54 @@ mod tests {
         assert!(SafariCookieReader::safari_timestamp_to_utc(0.0).is_none());
         assert!(SafariCookieReader::safari_timestamp_to_utc(2_000_000_000.0).is_some());
     }
+
+    #[test]
+    fn read_cookies_reads_and_filters_a_fixture_file() {
+        use crate::types::CookieQuery;
+
+        // Write the fixture to a unique temp path (no Keychain or real Safari DB).
+        let path = std::env::temp_dir().join(format!(
+            "get_cookie2_safari_{}.binarycookies",
+            std::process::id()
+        ));
+        std::fs::write(&path, build_fixture()).unwrap();
+        let store = path.to_string_lossy().to_string();
+        let reader = SafariCookieReader::new();
+
+        let query = |name: &str, domain: &str| CookieQuery {
+            name_pattern: name.to_string(),
+            domain_pattern: Some(domain.to_string()),
+            include_expired: false,
+        };
+
+        // Wildcards return the cookie with Safari metadata.
+        let all = reader.read_cookies(&store, &query("%", "%")).unwrap();
+        assert_eq!(all.len(), 1);
+        assert_eq!(all[0].name, "session");
+        assert_eq!(all[0].value, "abc123");
+        assert_eq!(all[0].domain, "example.com");
+        assert_eq!(all[0].meta.browser, "Safari");
+        assert!(!all[0].meta.decrypted);
+
+        // Matching name + domain pattern still matches.
+        assert_eq!(
+            reader
+                .read_cookies(&store, &query("session", "%example%"))
+                .unwrap()
+                .len(),
+            1
+        );
+
+        // Non-matching domain and non-matching name each filter the cookie out.
+        assert!(reader
+            .read_cookies(&store, &query("%", "%other.test%"))
+            .unwrap()
+            .is_empty());
+        assert!(reader
+            .read_cookies(&store, &query("nonexistent", "%"))
+            .unwrap()
+            .is_empty());
+
+        let _ = std::fs::remove_file(&path);
+    }
 }
