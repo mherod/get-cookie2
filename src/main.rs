@@ -220,6 +220,16 @@ fn normalize_domain_pattern(domain: &str) -> String {
     }
 }
 
+/// True when `domain` is `target` itself or a subdomain of it, ignoring a
+/// leading dot and case. This tightens the `%target%` SQL pre-filter so a
+/// substring match (`github.com` inside `mygithub.community` or
+/// `github.com.evil.test`) does not leak a look-alike host's cookies.
+fn host_matches(target: &str, domain: &str) -> bool {
+    let target = target.trim_start_matches('.').to_lowercase();
+    let domain = domain.trim_start_matches('.').to_lowercase();
+    domain == target || domain.ends_with(&format!(".{}", target))
+}
+
 fn main() -> Result<()> {
     // Show help if no arguments provided
     if std::env::args().len() == 1 {
@@ -237,14 +247,27 @@ fn main() -> Result<()> {
     // Handle curl command generation - we'll process this after collecting cookies
     let curl_mode = args.curl;
 
-    // Build the domain pattern. Both the --url host and the bare domain
-    // argument go through the same normalization so they match identically.
-    let domain_pattern = if let Some(ref url_str) = args.url {
+    // Build the domain pattern (a wide-net SQL LIKE pre-filter) and an optional
+    // boundary target. When the user names a concrete host — via --url, or a bare
+    // domain with no explicit `%` — we additionally require a host-suffix match so
+    // a substring like `github.com` doesn't also match `mygithub.community` or
+    // `github.com.evil.test`. An explicit `%` pattern (including the `%` default)
+    // keeps pure LIKE semantics with no boundary filtering.
+    let (domain_pattern, boundary_target) = if let Some(ref url_str) = args.url {
         let parsed_url = url::Url::parse(url_str).context("Failed to parse URL")?;
-        let domain = parsed_url.host_str().context("URL has no host")?;
-        normalize_domain_pattern(domain)
+        let domain = parsed_url
+            .host_str()
+            .context("URL has no host")?
+            .to_string();
+        let pattern = normalize_domain_pattern(&domain);
+        (pattern, Some(domain))
+    } else if args.domain.contains('%') {
+        (args.domain.clone(), None)
     } else {
-        normalize_domain_pattern(&args.domain)
+        (
+            normalize_domain_pattern(&args.domain),
+            Some(args.domain.clone()),
+        )
     };
 
     let browser = match args.browser.as_deref() {
@@ -341,6 +364,12 @@ fn main() -> Result<()> {
                 }
             }
         }
+    }
+
+    // Tighten the wide-net domain LIKE to a host-boundary match when the user
+    // named a concrete host, so look-alike domains are not returned.
+    if let Some(ref target) = boundary_target {
+        all_cookies.retain(|cookie| host_matches(target, &cookie.domain));
     }
 
     // Deduplicate cookies by (name, domain, value) tuple
@@ -444,5 +473,24 @@ mod tests {
         assert_eq!(normalize_domain_pattern("auth.%"), "auth.%");
         assert_eq!(normalize_domain_pattern("%.github.com"), "%.github.com");
         assert_eq!(normalize_domain_pattern("%github%"), "%github%");
+    }
+
+    #[test]
+    fn host_matches_accepts_exact_and_subdomains() {
+        use super::host_matches;
+        assert!(host_matches("github.com", "github.com"));
+        assert!(host_matches("github.com", ".github.com")); // leading dot
+        assert!(host_matches("github.com", "api.github.com")); // subdomain
+        assert!(host_matches("github.com", "GitHub.com")); // case-insensitive
+        assert!(host_matches(".github.com", "github.com")); // dotted target
+    }
+
+    #[test]
+    fn host_matches_rejects_look_alikes() {
+        use super::host_matches;
+        assert!(!host_matches("github.com", "mygithub.community"));
+        assert!(!host_matches("github.com", "github.com.evil.test"));
+        assert!(!host_matches("github.com", "notgithub.com"));
+        assert!(!host_matches("github.com", "example.com"));
     }
 }
