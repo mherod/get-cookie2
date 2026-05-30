@@ -204,6 +204,22 @@ fn list_profiles(browser_name: &str) -> Result<()> {
     Ok(())
 }
 
+/// Normalize a user-supplied domain into a SQL `LIKE` pattern.
+///
+/// A bare domain (no `%`) is wrapped as `%domain%` so it matches host-only,
+/// leading-dot (`.domain`), and subdomain (`sub.domain`) cookies — the common
+/// case. A pattern that already contains `%` (including the `%` default, or an
+/// explicit anchor like `auth.%`) is passed through unchanged so callers keep
+/// full control. Shared by the `--url` path and the bare domain argument so
+/// both have identical matching semantics.
+fn normalize_domain_pattern(domain: &str) -> String {
+    if domain.contains('%') {
+        domain.to_string()
+    } else {
+        format!("%{}%", domain)
+    }
+}
+
 fn main() -> Result<()> {
     // Show help if no arguments provided
     if std::env::args().len() == 1 {
@@ -221,16 +237,14 @@ fn main() -> Result<()> {
     // Handle curl command generation - we'll process this after collecting cookies
     let curl_mode = args.curl;
 
-    // Extract domain from URL if provided
+    // Build the domain pattern. Both the --url host and the bare domain
+    // argument go through the same normalization so they match identically.
     let domain_pattern = if let Some(ref url_str) = args.url {
         let parsed_url = url::Url::parse(url_str).context("Failed to parse URL")?;
-
         let domain = parsed_url.host_str().context("URL has no host")?;
-
-        // Use % wildcards to match subdomains
-        format!("%{}%", domain)
+        normalize_domain_pattern(domain)
     } else {
-        args.domain.clone()
+        normalize_domain_pattern(&args.domain)
     };
 
     let browser = match args.browser.as_deref() {
@@ -406,4 +420,29 @@ fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::normalize_domain_pattern;
+
+    #[test]
+    fn bare_domain_is_wrapped_for_subdomain_match() {
+        assert_eq!(normalize_domain_pattern("github.com"), "%github.com%");
+        assert_eq!(normalize_domain_pattern("example.co.uk"), "%example.co.uk%");
+    }
+
+    #[test]
+    fn wildcard_default_is_passed_through() {
+        // The default domain arg is "%"; it must stay match-all, not "%%%".
+        assert_eq!(normalize_domain_pattern("%"), "%");
+    }
+
+    #[test]
+    fn explicit_patterns_are_preserved() {
+        // A caller-supplied % means they control the anchoring.
+        assert_eq!(normalize_domain_pattern("auth.%"), "auth.%");
+        assert_eq!(normalize_domain_pattern("%.github.com"), "%.github.com");
+        assert_eq!(normalize_domain_pattern("%github%"), "%github%");
+    }
 }

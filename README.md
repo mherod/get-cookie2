@@ -68,6 +68,8 @@ Options:
 
 > **Browser support:** Chrome, Arc, and Edge share the Chromium cookie reader; Firefox and Safari each have their own. When no `--browser` is given, Chrome, Firefox, Arc, Edge, and Safari are all scanned. Safari reads the binary `Cookies.binarycookies` file (macOS may require granting Full Disk Access for the sandboxed Safari container). `--browser opera` is accepted but currently reads no cookies — that reader is not yet implemented.
 
+> **Domain matching:** `NAME` and `DOMAIN` are SQL `LIKE` patterns where `%` is the wildcard. A bare domain (no `%`) is treated as a substring match, so `get-cookie2 % github.com` is wrapped to `%github.com%` and matches host-only, leading-dot (`.github.com`), and subdomain (`api.github.com`) cookies. Supply your own `%` to control anchoring exactly (e.g. `auth.%`), and the default `%` still matches everything. The `--url` flag normalizes its host the same way.
+
 ## Examples
 
 ### Basic Cookie Extraction
