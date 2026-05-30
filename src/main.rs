@@ -399,18 +399,9 @@ fn main() -> Result<()> {
         }
         let url_str = args.url.as_ref().unwrap();
 
-        // Generate cookie header from collected cookies
-        let mut seen_names = std::collections::HashSet::new();
-        let cookie_header: Vec<String> = all_cookies
-            .iter()
-            .rev()
-            .filter(|c| seen_names.insert(c.name.clone()))
-            .map(|c| format!("{}={}", c.name, c.value))
-            .collect::<Vec<_>>()
-            .into_iter()
-            .rev()
-            .collect();
-        let cookie_str = cookie_header.join("; ");
+        // Generate cookie header from collected cookies (shared dedup-by-name
+        // logic with the Render output format).
+        let cookie_str = output::render_cookie_header(&all_cookies);
 
         let cmd = format!("curl -s {} -H \"Cookie: {}\"", url_str, cookie_str);
         println!("{}", cmd);

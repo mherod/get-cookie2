@@ -62,3 +62,64 @@ pub fn validate_jwt(token: &str, secret: &str) -> Option<JwtInfo> {
         is_valid: true,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use jsonwebtoken::{encode, EncodingKey, Header};
+    use serde_json::json;
+
+    /// Build an HS256 token signed with `secret`. A far-future `exp` claim is
+    /// included so the default `validate_jwt` expiry check passes.
+    fn make_token(secret: &str) -> String {
+        let claims = json!({ "sub": "user-123", "name": "Test User", "exp": 9_999_999_999i64 });
+        encode(
+            &Header::default(),
+            &claims,
+            &EncodingKey::from_secret(secret.as_bytes()),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn is_jwt_accepts_real_token() {
+        assert!(is_jwt(&make_token("secret")));
+    }
+
+    #[test]
+    fn is_jwt_rejects_non_tokens() {
+        assert!(!is_jwt("not-a-jwt"));
+        assert!(!is_jwt("only.two")); // wrong segment count
+        assert!(!is_jwt("plain.text.value")); // 3 parts but header is not valid JWT
+    }
+
+    #[test]
+    fn decode_jwt_returns_claims_without_verification() {
+        // decode_jwt must succeed regardless of the signing secret because it
+        // performs no signature or expiry validation.
+        let token = make_token("whatever-secret");
+        let info = decode_jwt(&token).expect("valid JWT should decode");
+        assert_eq!(info.claims["sub"], "user-123");
+        assert_eq!(info.claims["name"], "Test User");
+        assert!(!info.is_valid); // unverified
+    }
+
+    #[test]
+    fn decode_jwt_rejects_non_token() {
+        assert!(decode_jwt("not-a-jwt").is_none());
+    }
+
+    #[test]
+    fn validate_jwt_accepts_correct_secret() {
+        let token = make_token("correct-secret");
+        let info = validate_jwt(&token, "correct-secret").expect("signature should validate");
+        assert_eq!(info.claims["sub"], "user-123");
+        assert!(info.is_valid);
+    }
+
+    #[test]
+    fn validate_jwt_rejects_wrong_secret() {
+        let token = make_token("correct-secret");
+        assert!(validate_jwt(&token, "wrong-secret").is_none());
+    }
+}
