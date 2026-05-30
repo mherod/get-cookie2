@@ -286,10 +286,17 @@ fn main() -> Result<()> {
             }
             Browser::Firefox => Box::new(FirefoxCookieReader::new()),
             Browser::Safari => {
-                // Safari support would go here
+                // Safari stores cookies in the binary Cookies.binarycookies format,
+                // which is not yet parsed. Tell the user rather than silently skipping.
+                eprintln!(
+                    "Safari cookie extraction is not yet implemented (binary Cookies.binarycookies format). Skipping."
+                );
                 continue;
             }
-            _ => continue,
+            Browser::Opera => {
+                eprintln!("Opera cookie extraction is not yet implemented. Skipping.");
+                continue;
+            }
         };
 
         if args.verbose {
