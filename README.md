@@ -4,7 +4,7 @@ A fast, powerful command-line tool for extracting and using browser cookies. Bui
 
 ## Features
 
-- 🚀 **Extract cookies from multiple browsers**: Chrome, Arc, and Edge (Chromium-based) plus Firefox — Safari and Opera are recognised as arguments but not yet implemented
+- 🚀 **Extract cookies from multiple browsers**: Chrome, Arc, and Edge (Chromium-based), Firefox, and Safari (binary `Cookies.binarycookies`) — Opera is recognised as an argument but not yet implemented
 - 🔐 **Decrypt Chrome cookies**: Seamless macOS Keychain integration with single permission prompt
 - 🍪 **Multiple output formats**: Plain text, JSON, or HTTP Cookie header format
 - 🔧 **JWT detection**: Automatically detect, decode, and validate JWT tokens in cookies
@@ -66,7 +66,7 @@ Options:
   -h, --help                     Print help
 ```
 
-> **Browser support:** Chrome, Arc, and Edge share the Chromium cookie reader, and Firefox has its own. When no `--browser` is given, all four are scanned. `--browser safari` and `--browser opera` are accepted but currently read no cookies — these readers are not yet implemented.
+> **Browser support:** Chrome, Arc, and Edge share the Chromium cookie reader; Firefox and Safari each have their own. When no `--browser` is given, Chrome, Firefox, Arc, Edge, and Safari are all scanned. Safari reads the binary `Cookies.binarycookies` file (macOS may require granting Full Disk Access for the sandboxed Safari container). `--browser opera` is accepted but currently reads no cookies — that reader is not yet implemented.
 
 ## Examples
 
@@ -283,8 +283,7 @@ If you get repeated Keychain permission prompts:
 
 Contributions are welcome! Areas for improvement:
 - Linux and Windows support
-- Additional browser support (Brave, Vivaldi, etc.)
-- Safari cookie decryption
+- Additional browser support (Opera, Brave, Vivaldi, etc.)
 - More output formats
 - Performance optimizations
 

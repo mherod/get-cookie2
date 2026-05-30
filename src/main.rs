@@ -5,7 +5,10 @@ mod output;
 mod types;
 
 use anyhow::{Context, Result};
-use browsers::{chrome::ChromeCookieReader, firefox::FirefoxCookieReader, BrowserCookieReader};
+use browsers::{
+    chrome::ChromeCookieReader, firefox::FirefoxCookieReader, safari::SafariCookieReader,
+    BrowserCookieReader,
+};
 use clap::Parser;
 use output::{output_cookies, OutputFormat};
 use types::{Browser, CookieQuery};
@@ -275,6 +278,7 @@ fn main() -> Result<()> {
             Browser::Firefox,
             Browser::Arc,
             Browser::Edge,
+            Browser::Safari,
         ]
     };
 
@@ -284,14 +288,7 @@ fn main() -> Result<()> {
                 Box::new(ChromeCookieReader::new(browser))
             }
             Browser::Firefox => Box::new(FirefoxCookieReader::new()),
-            Browser::Safari => {
-                // Safari stores cookies in the binary Cookies.binarycookies format,
-                // which is not yet parsed. Tell the user rather than silently skipping.
-                eprintln!(
-                    "Safari cookie extraction is not yet implemented (binary Cookies.binarycookies format). Skipping."
-                );
-                continue;
-            }
+            Browser::Safari => Box::new(SafariCookieReader::new()),
             Browser::Opera => {
                 eprintln!("Opera cookie extraction is not yet implemented. Skipping.");
                 continue;
