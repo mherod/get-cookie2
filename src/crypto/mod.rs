@@ -1,5 +1,4 @@
 use anyhow::Result;
-use std::sync::Mutex;
 
 #[cfg(target_os = "macos")]
 pub mod macos;
@@ -7,6 +6,11 @@ pub mod macos;
 #[cfg(target_os = "macos")]
 pub use macos::{decrypt_chrome_cookie_with_key, get_chrome_key as get_chrome_key_impl};
 
+// The key cache is only exercised on macOS, where the Keychain lookup happens.
+#[cfg(target_os = "macos")]
+use std::sync::Mutex;
+
+#[cfg(target_os = "macos")]
 static CHROME_KEY_CACHE: Mutex<Option<Vec<u8>>> = Mutex::new(None);
 
 /// Get Chrome decryption key from Keychain (cached)
@@ -34,6 +38,7 @@ pub fn get_chrome_key_cached() -> Result<Vec<u8>> {
 }
 
 /// Decrypt cookie value with a pre-fetched key
+#[cfg_attr(not(target_os = "macos"), allow(unused_variables))]
 pub fn decrypt_value_with_key(
     encrypted_value: &[u8],
     key: &[u8],
