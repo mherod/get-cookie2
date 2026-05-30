@@ -45,6 +45,5 @@ impl Browser {
 pub struct CookieQuery {
     pub name_pattern: String,
     pub domain_pattern: Option<String>,
-    pub browser: Option<Browser>,
     pub include_expired: bool,
 }

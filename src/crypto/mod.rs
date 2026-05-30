@@ -50,12 +50,6 @@ pub fn decrypt_value_with_key(
     }
 }
 
-/// Legacy function - prefer get_chrome_key_cached + decrypt_value_with_key
-pub fn decrypt_value(encrypted_value: &[u8], _browser: &str, meta_version: i64) -> Result<String> {
-    let key = get_chrome_key_cached()?;
-    decrypt_value_with_key(encrypted_value, &key, meta_version)
-}
-
 #[cfg(test)]
 mod tests {
     use pbkdf2::pbkdf2_hmac;

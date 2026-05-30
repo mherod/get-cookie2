@@ -247,7 +247,6 @@ fn main() -> Result<()> {
     let query = CookieQuery {
         name_pattern: args.name.clone(),
         domain_pattern: Some(domain_pattern),
-        browser,
         include_expired: args.include_expired,
     };
 
