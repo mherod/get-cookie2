@@ -4,7 +4,7 @@ A fast, powerful command-line tool for extracting and using browser cookies. Bui
 
 ## Features
 
-- 🚀 **Extract cookies from multiple browsers**: Chrome, Firefox, Safari, Arc, Edge, Opera
+- 🚀 **Extract cookies from multiple browsers**: Chrome, Arc, and Edge (Chromium-based) plus Firefox — Safari and Opera are recognised as arguments but not yet implemented
 - 🔐 **Decrypt Chrome cookies**: Seamless macOS Keychain integration with single permission prompt
 - 🍪 **Multiple output formats**: Plain text, JSON, or HTTP Cookie header format
 - 🔧 **JWT detection**: Automatically detect, decode, and validate JWT tokens in cookies
@@ -65,6 +65,8 @@ Options:
   -v, --verbose                  Verbose output
   -h, --help                     Print help
 ```
+
+> **Browser support:** Chrome, Arc, and Edge share the Chromium cookie reader, and Firefox has its own. When no `--browser` is given, all four are scanned. `--browser safari` and `--browser opera` are accepted but currently read no cookies — these readers are not yet implemented.
 
 ## Examples
 
@@ -230,7 +232,7 @@ cargo build
 # Build optimized release binary
 cargo build --release
 
-# Run tests
+# Run tests (note: the project currently ships no automated tests)
 cargo test
 
 # Run with verbose output
@@ -288,7 +290,7 @@ Contributions are welcome! Areas for improvement:
 
 ## License
 
-[Add your license here]
+No license has been declared for this project yet. Until one is added (a `license` field in `Cargo.toml` and/or a `LICENSE` file), all rights are reserved by the author.
 
 ## Acknowledgments
 
