@@ -1,4 +1,4 @@
-use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
+use jsonwebtoken::{decode, decode_header, DecodingKey, Validation};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -33,13 +33,8 @@ pub fn decode_jwt(token: &str) -> Option<JwtInfo> {
         Err(_) => return None,
     };
 
-    // Decode claims without verification
-    let mut validation = Validation::new(Algorithm::HS256);
-    validation.insecure_disable_signature_validation();
-    validation.validate_exp = false;
-    validation.validate_nbf = false;
-
-    let token_data = decode::<Value>(token, &DecodingKey::from_secret(&[]), &validation).ok()?;
+    // Decode claims without any signature/expiry validation
+    let token_data = jsonwebtoken::dangerous::insecure_decode::<Value>(token).ok()?;
 
     Some(JwtInfo {
         header,
